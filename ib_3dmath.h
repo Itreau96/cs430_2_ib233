@@ -6,10 +6,10 @@
 #include <math.h>
 
 // Type declarations
-typedef struct ib_v3;
+typedef struct ib_v3 ib_v3;
 
 // Struct implementations
-struct ib_point
+struct ib_v3
 {
    float x, y, z;
 };
