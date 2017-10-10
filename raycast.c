@@ -4,86 +4,15 @@
 #include <math.h>
 #include <ctype.h>
 #include "ib_3dmath.h"
-
-#define RUN_SUCCESS 0
-#define RUN_FAIL 1
-#define MIN_ARGS 5
-#define TRUE 1
-#define FALSE 0
-
-#define LINE_TERM '\n'
-#define PROP_SEP ':'
-#define VALUE_SEP ','
-#define STR_END '\0'
-#define V3_START '['
-#define V3_END ']'
-#define TYPE_LEN 7
-#define PROPERTY_LEN 11
-#define VALUE_LEN 11
-
-#define CAM_VAL_COUNT 2
-#define SPHERE_VAL_COUNT 3
-#define PLANE_VAL_COUNT 3
-
-#define WIDTH_INVALID 1
-#define HEIGHT_INVALID 2
-#define INPUT_INVALID 3
-#define OUTPUT_INVALID 4
-
-#define CAMERA 0
-#define SPHERE 1
-#define PLANE 2
-
-// Type definitions
-typedef int bool;
-typedef struct rgb rgb;
-typedef struct obj obj;
-typedef struct obj_node obj_node;
-typedef struct linked_list linked_list;
-
-// Color in rgb format
-struct rgb
-{
-   float r;
-   float g;
-   float b;
-};
-
-// Create one central object that contains all variables for any object
-struct obj
-{
-   int type;
-   float width;
-   float height;
-   rgb color;
-   ib_v3 position;
-   float radius;
-   ib_v3 normal;
-};
-
-// Struct used used as a linked list node
-struct obj_node
-{
-   obj_node *next;
-   obj obj_ref;
-};
-
-// Linked list structure
-struct linked_list
-{
-   obj_node *first;
-   obj_node *last;
-   int size;
-};
+#include "raycast.h"
+#include "parser.h"
 
 // Forward declarations
 void create_node(obj *data, linked_list *list);
-void parse(linked_list *list, char *file_name, int *result);
-void store_obj_properties(obj *cur_obj, FILE *file, char *c, int *result);
-void get_next_word(char *word, char delim, int max_len, FILE *file, char *c);
-void get_camera(obj *cur_obj, FILE *file, char *c, int *result);
-void get_sphere(obj *cur_obj, FILE *file, char *c, int *result);
-void get_plane(obj *cur_obj, FILE *file, char *c, int *result);
+void render(int *width, int *height, linked_list *objs);
+void raycast(ib_v3 *r0, ib_v3 *rd, rgb *cur_rgb);
+void sphere_intersection(ib_v3 *r0, ib_v3 *rd, obj *cur_obj, float *t);
+void plane_intersection(ib_v3 *r0, ib_v3 *rd, obj *cur_obj, float *t);
 
 int main(int argc, char* argv[])
 {
@@ -91,17 +20,13 @@ int main(int argc, char* argv[])
    int width;
    int height;
    linked_list objs;
-   char *file_in_name;
-   char *file_out_name;
-   obj data;   
    int run_result;
-   bool valid = TRUE;
 
    // Relay error message if incorrect number of arguments were entered
    if (argc < MIN_ARGS)
    {
       // Subtract 1 from arguments entered, since 1st argument is the executable
-      printf("Incorrect number of arguments. You entered %d. You must enter 4.\n", argc - 1);
+      fprintf(stderr, "Incorrect number of arguments. You entered %d. You must enter 4. (err no. %d)\n", argc - 1, INPUT_INVALID);
 
       // Return error code
       return RUN_FAIL;
@@ -134,14 +59,127 @@ int main(int argc, char* argv[])
             traverser = traverser->next;
          }
       }
-      // If parse was unsuccessful, display error
+      // If parse was unsuccessful, display error message and code
       else
       {
-         printf("fail\n");
+         fprintf(stderr, "There was a problem parsing your input file. Please correct the file and try again. (err no. %d)\n", run_result);
       }
    }
    
    return RUN_SUCCESS;
+}
+
+// Used to render the scene given parsed objects
+void render(int *width, int *height, linked_list *objs)
+{
+   // Variable declarations
+   int rows;
+   int cols;
+   ib_v3 rd;
+   rgb cur_rgb;
+   float cam_width = objs->main_camera->obj_ref.width;
+   float cam_height = objs->main_camera->obj_ref.height;
+   double px_width = cam_width / *width;
+   double px_height = cam_height / *width;
+   ib_v3 r0 = { 0.0, 0.0, 0.0 }; // Initialize camera position
+   int pz = 1; // Given distance from camera to viewport
+   int py;
+   int px;
+
+   // Loop for as many columns in image
+   for (cols = 0; cols < *height; cols++)
+   {
+      // Calculate py first
+      py = CENTER_XY - cam_height  / 2.0 + px_height * (cols + 0.5);
+
+      // Loop for as many rows as possible
+      for (rows = 0; rows < *width; rows++)
+      {
+         // Calculate px
+         px = CENTER_XY - cam_width / 2.0 + px_width * (rows + 0.5);
+
+         // Combine variables into rd vector
+         rd.x = px;
+         rd.y = py;
+         rd.z = pz;
+
+         // Normalize the vector
+         ib_v3_normalize(&rd);
+
+         // Caycast with value         
+         raycast(&r0, &rd, &cur_rgb);
+      }
+   }
+}
+
+// Method used to raycast given rd and set of objects
+void raycast(ib_v3 *r0, ib_v3 *rd, rgb *cur_rgb)
+{
+   float a = 5.0;
+}
+
+// Method used to find sphere intersection
+void sphere_intersection(ib_v3 *r0, ib_v3 *rd, obj *cur_obj, float *t)
+{
+   // Variable declarations
+   float a;
+   float b;
+   float c;
+   float d;
+   float t0;
+   float t1;
+   
+   // Calculate a, b, and c values
+   a = (rd->x * rd->x) + (rd->y * rd->y) + (rd->z * rd->z);
+   b = 2 * (rd->x * (r0->x - cur_obj->position.x) + rd->y * (r0->y - cur_obj->position.y) + rd->z * (r0->z - cur_obj->position.z));
+   c = ((r0->x - cur_obj->position.x) * (r0->x - cur_obj->position.x) + 
+        (r0->y - cur_obj->position.y) * (r0->y - cur_obj->position.y) + 
+        (r0->z - cur_obj->position.z) * (r0->z - cur_obj->position.z)) - (cur_obj->radius * cur_obj->radius);
+
+   // Calculate descriminate value
+   d = (b * b - 4 * a * c);
+
+   // Only if descriminate is positive do we calculate intersection
+   if (d > 0)
+   {
+      // Calculate both t values
+      t0 = (-b + sqrtf(b * b - 4 * c * a)) / (2 * a);
+      t1 = (-b - sqrtf(b * b - 4 * c * a)) / (2 * a);
+
+      // Determine which t value to return
+      if (t1 > 0)
+      {
+         *t = t1;
+      }
+      else if (t0 > 0)
+      {
+         *t = t0;
+      }
+   }
+}
+
+// Method used to find plane intersection
+void plane_intersection(ib_v3 *r0, ib_v3 *rd, obj *cur_obj, float *t)
+{
+   // Variable declarations
+   float a;
+   float b;
+   float c;
+   float dist;
+   float den;
+   
+   // Normalize normal value and assign a, b, and c (for readability)
+   ib_v3_normalize(&(cur_obj->normal));
+   a = cur_obj->normal.x;
+   b = cur_obj->normal.y;
+   c = cur_obj->normal.z; 
+
+   // Calculate dist and den values
+   dist = -(a * cur_obj->position.x + b * cur_obj->position.y + c * cur_obj->position.z);
+   den = (a * rd->x + b * rd->y + c * rd->z);
+
+   // Set the new t value
+   *t = -(a * r0->x + b * r0->y + c * r0->z) / den;
 }
 
 // Helper function used to append a new node to the end of a linked list
@@ -175,610 +213,4 @@ void create_node(obj *data, linked_list *list)
       list->size = list->size + 1;
    }
 }
-
-// Method used to parse out objects in the input file
-void parse(linked_list *list, char *file_name, int *result)
-{
-   // Variable declarations
-   FILE *file;
-   char c;
-   obj cur_obj;
-
-   // Start by attemping to open the file
-   file = fopen(file_name, "r");
-
-   // Check if file exists
-   if (file)
-   {
-      // Read file character by character until file ends
-      while ((c = fgetc(file)) != EOF)
-      {
-         // Store object properties
-         store_obj_properties(&cur_obj, file, &c, result);
-
-         // Confirm that store operation worked correctly
-         if (*result == RUN_SUCCESS)
-         {
-            // Create node and append to list
-            create_node(&cur_obj, list);
-         }
-
-         // If not, execution halts
-      }
-
-      // Close file
-      fclose(file);
-   }
-   // If not, return error code
-   else
-   {
-      *result = INPUT_INVALID;
-   }
-}
-
-// Helper method used to store object properties 
-void store_obj_properties(obj *cur_obj, FILE *file, char *c, int *result)
-{
-   // Variable declarations
-   char obj_type[TYPE_LEN];
-
-   // Start by retrieving object type
-   get_next_word(obj_type, VALUE_SEP, TYPE_LEN, file, c);
-
-   // Store data based on object type
-   if (strcmp(obj_type, "camera") == 0)
-   {
-      // Store object type
-      cur_obj->type = CAMERA;
-
-      // Store object properties
-      get_camera(cur_obj, file, c, result);
-   }
-   else if (strcmp(obj_type, "sphere") == 0)
-   {
-      // Store object type
-      cur_obj->type = SPHERE;
-
-      // Store object variables
-      get_sphere(cur_obj, file, c, result);
-   }
-   else if (strcmp(obj_type, "plane") == 0)
-   {
-      // Store object type
-      cur_obj->type = PLANE;
-
-      // Store object variables
-      get_plane(cur_obj, file, c, result);
-   }
-   else
-   {
-      *result = INPUT_INVALID;
-   }   
-}
-
-// Helper method used to store camera object variables
-void get_camera(obj *cur_obj, FILE *file, char *c, int *result)
-{
-   // Variable declarations
-   char property[PROPERTY_LEN];
-   char value[VALUE_LEN];
-   bool width_found = FALSE;
-   bool height_found = FALSE;
-   int prop_count = 0;
-
-   // Store object type
-   cur_obj->type = CAMERA;
-
-   // Store object variables
-   while (*c != LINE_TERM && *c != EOF)
-   {
-      // Get next word in line
-      get_next_word(property, PROP_SEP, PROPERTY_LEN, file, c);
-
-      // Compare property value
-      if (strcmp(property, "width") == 0)
-      {
-         // Get property value
-         get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-         // Set property value
-         cur_obj->width = atof(value);
-
-         // Set boolean value
-         width_found = TRUE;
-
-         // Increment the prop count
-         prop_count++;
-      }
-      else if (strcmp(property, "height") == 0)
-      {
-         // Get property value
-         get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-         // Set property value
-         cur_obj->height = atof(value);
-
-         // Set boolean value
-         height_found = TRUE;
-
-         // Increment the prop count
-         prop_count++;
-      }
-      else
-      {
-         *result = INPUT_INVALID;
-      }
-
-      // Clear values
-      property[0] = STR_END;
-      value[0] = STR_END;
-   }
-
-   // Return error code if height or width was not found
-   if (width_found == TRUE && height_found == TRUE && *result != INPUT_INVALID && prop_count <= CAM_VAL_COUNT)
-   {
-      *result = RUN_SUCCESS;
-   }
-   else
-   {
-      *result = INPUT_INVALID;
-   }
-}
-
-// Helper method used to store camera object variables
-void get_sphere(obj *cur_obj, FILE *file, char *c, int *result)
-{
-   // Variable declarations
-   char property[PROPERTY_LEN];
-   char value[VALUE_LEN];
-   bool r_found = FALSE;
-   bool g_found = FALSE;
-   bool b_found = FALSE;
-   bool x_found = FALSE;
-   bool y_found = FALSE;
-   bool z_found = FALSE;
-   bool radius_found = FALSE;
-   int prop_count = 0;
-
-   // Store object type
-   cur_obj->type = SPHERE;
-
-   // Store object variables
-   while (*c != LINE_TERM && *c != EOF)
-   {
-      // Get next word in line
-      get_next_word(property, PROP_SEP, PROPERTY_LEN, file, c);
-
-      // Compare property value
-      if (strcmp(property, "color") == 0)
-      {
-         // Since value is property, get everything up to "["
-         while (*c != LINE_TERM && isspace(*c))
-         {
-            *c = fgetc(file);
-         }
-
-         // Get the r color value
-         if (*c != EOF && *c == V3_START && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->color.r = atof(value);
-
-            // Set boolean value
-            r_found = TRUE;
-         }
-
-         // Get the g color value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->color.g = atof(value);
-
-            // Set boolean value
-            g_found = TRUE;
-         }
-
-         // Get the b color value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, V3_END, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->color.b = atof(value);
-
-            // Set boolean value
-            b_found = TRUE;
-         }
-
-         // Make sure if ',' is next character, it moves past it
-         if (*c == VALUE_SEP && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-         }
-
-         // Increment property count if all found
-         prop_count++;
-      }
-      else if (strcmp(property, "position") == 0)
-      {
-         // Since value is property, get everything up to "["
-         while (*c != LINE_TERM && isspace(*c))
-         {
-            *c = fgetc(file);
-         }
-
-         // Get the x value
-         if (*c != EOF && *c == V3_START && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->position.x = atof(value);
-
-            // Set boolean value
-            x_found = TRUE;
-         }
-
-         // Get the y value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->position.y = atof(value);
-
-            // Set boolean value
-            y_found = TRUE;
-         }
-
-         // Get the z value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, V3_END, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->position.z = atof(value);
-
-            // Set boolean value
-            z_found = TRUE;
-         }
-
-         // Make sure that if ',' is next character, it moves past it
-         if (*c == VALUE_SEP && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-         }
-
-         // Increment property count if all found
-         prop_count++;
-      }
-      else if (strcmp(property, "radius") == 0)
-      {
-         // Get property value
-         get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-         // Set property value
-         cur_obj->radius = atof(value);
-
-         // Set boolean value
-         radius_found = TRUE;
-
-         // Increment the prop count
-         prop_count++;
-      }
-      else
-      {
-         *result = INPUT_INVALID;
-      }
-
-      // Clear values
-      property[0] = STR_END;
-      value[0] = STR_END;
-   }
-
-   // Return error code if height or width was not found
-   if (r_found == TRUE && g_found == TRUE && b_found == TRUE &&
-       x_found == TRUE && y_found == TRUE && z_found == TRUE &&
-       radius_found == TRUE && *result != INPUT_INVALID && prop_count <= SPHERE_VAL_COUNT)
-   {
-      *result = RUN_SUCCESS;
-   }
-   else
-   {
-      *result = INPUT_INVALID;
-   }
-}
-
-// Helper method used to store plane object variables
-void get_plane(obj *cur_obj, FILE *file, char *c, int *result)
-{
-   // Variable declarations
-   char property[PROPERTY_LEN];
-   char value[VALUE_LEN];
-   bool r_found = FALSE;
-   bool g_found = FALSE;
-   bool b_found = FALSE;
-   bool x_found = FALSE;
-   bool y_found = FALSE;
-   bool z_found = FALSE;
-   bool n1_found = FALSE;
-   bool n2_found = FALSE;
-   bool n3_found = FALSE;
-   int prop_count = 0;
-
-   // Store object type
-   cur_obj->type = PLANE;
-
-   // Store object variables
-   while (*c != LINE_TERM && *c != EOF)
-   {
-      // Get next word in line
-      get_next_word(property, PROP_SEP, PROPERTY_LEN, file, c);
-
-      // Compare property value
-      if (strcmp(property, "color") == 0)
-      {
-         // Since value is property, get everything up to "["
-         while (*c != LINE_TERM && isspace(*c))
-         {
-            *c = fgetc(file);
-         }
-
-         // Get the r color value
-         if (*c != EOF && *c == V3_START && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->color.r = atof(value);
-
-            // Set boolean value
-            r_found = TRUE;
-         }
-
-         // Get the g color value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->color.g = atof(value);
-
-            // Set boolean value
-            g_found = TRUE;
-         }
-
-         // Get the b color value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, V3_END, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->color.b = atof(value);
-
-            // Set boolean value
-            b_found = TRUE;
-         }
-
-         // Make sure if ',' is next character, it moves past it
-         if (*c == VALUE_SEP && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-         }
-
-         // Increment property count if all found
-         prop_count++;
-      }
-      else if (strcmp(property, "position") == 0)
-      {
-         // Since value is property, get everything up to "["
-         while (*c != LINE_TERM && isspace(*c))
-         {
-            *c = fgetc(file);
-         }
-
-         // Get the x value
-         if (*c != EOF && *c == V3_START && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->position.x = atof(value);
-
-            // Set boolean value
-            x_found = TRUE;
-         }
-
-         // Get the y value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->position.y = atof(value);
-
-            // Set boolean value
-            y_found = TRUE;
-         }
-
-         // Get the z value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, V3_END, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->position.z = atof(value);
-
-            // Set boolean value
-            z_found = TRUE;
-         }
-
-         // Make sure that if ',' is next character, it moves past it
-         if (*c == VALUE_SEP && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-         }
-
-         // Increment property count if all found
-         prop_count++;
-      }
-      else if (strcmp(property, "normal") == 0)
-      {
-         // Since value is property, get everything up to "["
-         while (*c != LINE_TERM && isspace(*c))
-         {
-            *c = fgetc(file);
-         }
-
-         // Get the normal x value
-         if (*c != EOF && *c == V3_START && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->normal.x = atof(value);
-
-            // Set boolean value
-            n1_found = TRUE;
-         }
-
-         // Get the normal y value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->normal.y = atof(value);
-
-            // Set boolean value
-            n2_found = TRUE;
-         }
-
-         // Get the normal z value
-         if (*c != EOF && *c != LINE_TERM)
-         {
-            *c = fgetc(file);
-            
-            // Get property value
-            get_next_word(value, V3_END, VALUE_LEN, file, c);
-
-            // Set property value
-            cur_obj->normal.z = atof(value);
-
-            // Set boolean value
-            n3_found = TRUE;
-         }
-
-         // Make sure that if ',' is next character, it moves past it
-         if (*c == VALUE_SEP)
-         {
-            *c = fgetc(file);
-         }
-
-         // Increment property count if all found
-         prop_count++;
-      }
-      else
-      {
-         *result = INPUT_INVALID;
-      }
-
-      // Clear values
-      property[0] = STR_END;
-      value[0] = STR_END;
-   }
-
-   // Return error code if height or width was not found
-   if (r_found == TRUE && g_found == TRUE && b_found == TRUE &&
-       x_found == TRUE && y_found == TRUE && z_found == TRUE &&
-       n1_found == TRUE && n2_found == TRUE && n3_found == TRUE &&
-       *result != INPUT_INVALID && prop_count <= SPHERE_VAL_COUNT)
-   {
-      *result = RUN_SUCCESS;
-   }
-   else
-   {
-      *result = INPUT_INVALID;
-   }
-}
-
-// Helper method used to retrieve word from file
-void get_next_word(char *word, char delim, int max_len, FILE *file, char *c)
-{
-   // Variable declarations
-   int index = 0;
-
-   // Start by stripping white-space from front of word
-   while (isspace(*c))
-   {
-      *c = fgetc(file);
-   }
-
-   // While deliminator is not reached, continue searching for word
-   while (*c != delim && index < max_len && *c != LINE_TERM && *c != EOF)
-   {
-      word[index] = *c;
-      *c = fgetc(file);
-      index++;
-   }
-
-   // If character is end of file, return error code
-   if (*c != EOF && *c != LINE_TERM)
-   {
-      *c = fgetc(file);
-   }
-
-   // Set ending character
-   word[index] = STR_END;
-}
-
-
-
-
 

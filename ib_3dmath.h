@@ -57,4 +57,14 @@ static inline void ib_v3_cross(ib_v3 *out, ib_v3 *a, ib_v3 *b)
    out->z = (a->x*b->y) - (a->y*b->x);
 }
 
+// Function used to normalize a given vector
+static inline void ib_v3_normalize(ib_v3 *v)
+{
+   // Caculate length of vector and divide each dimmension by this value
+   float length = sqrtf((v->x * v->x) + (v->y * v->y) + (v->z * v->z));
+   v->x = v->x / length;
+   v->y = v->y / length;
+   v->z = v->z / length;
+}
+
 #endif
