@@ -46,10 +46,9 @@ int main(int argc, char* argv[])
       // Raycast objects if parse was successful
       if (run_result == RUN_SUCCESS)
       {  
+         // Calculate rgb values at each pixel
          render(&width, &height, &objs, &color_buff);
-         printf("%d %d\n", width, height);
-         printf("size: %d\n", color_buff.size);
-
+         // Write the output to the file
          write_file(&color_buff, &width, &height, argv[4]);
       }
       // If parse was unsuccessful, display error message and code
@@ -73,9 +72,9 @@ void render(int *width, int *height, linked_list *objs, rgb_list *color_buff)
    float cam_width = objs->main_camera->obj_ref.width;
    float cam_height = objs->main_camera->obj_ref.height;
    double px_width = cam_width / *width;
-   double px_height = cam_height / *width;
+   double px_height = cam_height / *height;
    ib_v3 r0 = { 0.0, 0.0, 0.0 }; // Initialize camera position
-   float pz = 1; // Given distance from camera to viewport
+   float pz = -1; // Given distance from camera to viewport (negative z axis)
    float py;
    float px;
    float t = INFINITY;
@@ -83,7 +82,7 @@ void render(int *width, int *height, linked_list *objs, rgb_list *color_buff)
    obj_node *cur_obj = objs->first;
 
    // Loop for as many columns in image
-   for (cols = 0; cols < *height; cols+=1)
+   for (cols = *height - 1; cols >= 0 ; cols-=1) // Start from top to bottom. Makes +y axis upward direction.
    {
       // Calculate py first
       py = CENTER_XY - cam_height  / 2.0 + px_height * (cols + 0.5);
