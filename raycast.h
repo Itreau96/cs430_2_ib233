@@ -20,7 +20,9 @@ typedef int bool;
 typedef struct rgb rgb;
 typedef struct obj obj;
 typedef struct obj_node obj_node;
+typedef struct rgb_node rgb_node;
 typedef struct linked_list linked_list;
+typedef struct rgb_list rgb_list;
 
 // Color in rgb format
 struct rgb
@@ -49,12 +51,27 @@ struct obj_node
    obj obj_ref;
 };
 
+// Struct used as a node for an rgb value
+struct rgb_node
+{
+   rgb_node *next;
+   rgb color;
+};
+
 // Linked list structure
 struct linked_list
 {
    obj_node *first;
    obj_node *last;
    obj_node *main_camera;
+   int size;
+};
+
+// Rgb list structure
+struct rgb_list
+{
+   rgb_node *first;
+   rgb_node *last;
    int size;
 };
 

@@ -210,11 +210,15 @@ void get_sphere(obj *cur_obj, FILE *file, char *c, int *result)
             // Get property value
             get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
 
-            // Set property value
-            cur_obj->color.r = atof(value);
+            // Make sure r is between 0 and 1
+            if (atof(value) <= 1 && atof(value) >= 0)
+            {
+               // Set property value
+               cur_obj->color.r = atof(value);
 
-            // Set boolean value
-            r_found = TRUE;
+               // Set boolean value
+               r_found = TRUE;
+            }
          }
 
          // Get the g color value
@@ -225,11 +229,15 @@ void get_sphere(obj *cur_obj, FILE *file, char *c, int *result)
             // Get property value
             get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
 
-            // Set property value
-            cur_obj->color.g = atof(value);
+            // Make sure g is between 0 and 1
+            if (atof(value) <= 1 && atof(value) >= 0)
+            {
+               // Set property value
+               cur_obj->color.g = atof(value);
 
-            // Set boolean value
-            g_found = TRUE;
+               // Set boolean value
+               g_found = TRUE;
+            }
          }
 
          // Get the b color value
@@ -240,11 +248,15 @@ void get_sphere(obj *cur_obj, FILE *file, char *c, int *result)
             // Get property value
             get_next_word(value, V3_END, VALUE_LEN, file, c);
 
-            // Set property value
-            cur_obj->color.b = atof(value);
+            // Make sure b is between 0 and 1
+            if (atof(value) <= 1 && atof(value) >= 0)
+            {
+               // Set property value
+               cur_obj->color.b = atof(value);
 
-            // Set boolean value
-            b_found = TRUE;
+               // Set boolean value
+               b_found = TRUE;
+            }
          }
 
          // Make sure if ',' is next character, it moves past it
@@ -326,8 +338,12 @@ void get_sphere(obj *cur_obj, FILE *file, char *c, int *result)
          // Set property value
          cur_obj->radius = atof(value);
 
-         // Set boolean value
-         radius_found = TRUE;
+         // Make sure radius is between 0 and 1
+         if (atof(value) >= 0)
+         {
+            // Set boolean value
+            radius_found = TRUE;
+         }
 
          // Increment the prop count
          prop_count++;
@@ -398,11 +414,15 @@ void get_plane(obj *cur_obj, FILE *file, char *c, int *result)
             // Get property value
             get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
 
-            // Set property value
-            cur_obj->color.r = atof(value);
+            // Make sure r is between 0 and 1
+            if (atof(value) <= 1 && atof(value) >= 0)
+            {
+               // Set property value
+               cur_obj->color.r = atof(value);
 
-            // Set boolean value
-            r_found = TRUE;
+               // Set boolean value
+               r_found = TRUE;
+            }
          }
 
          // Get the g color value
@@ -413,11 +433,15 @@ void get_plane(obj *cur_obj, FILE *file, char *c, int *result)
             // Get property value
             get_next_word(value, VALUE_SEP, VALUE_LEN, file, c);
 
-            // Set property value
-            cur_obj->color.g = atof(value);
+            // Make sure g is between 0 and 1
+            if (atof(value) <= 1 && atof(value) >= 0)
+            {
+               // Set property value
+               cur_obj->color.g = atof(value);
 
-            // Set boolean value
-            g_found = TRUE;
+               // Set boolean value
+               g_found = TRUE;
+            }
          }
 
          // Get the b color value
@@ -428,11 +452,15 @@ void get_plane(obj *cur_obj, FILE *file, char *c, int *result)
             // Get property value
             get_next_word(value, V3_END, VALUE_LEN, file, c);
 
-            // Set property value
-            cur_obj->color.b = atof(value);
+            // Make sure b is between 0 and 1
+            if (atof(value) <= 1 && atof(value) >= 0)
+            {
+               // Set property value
+               cur_obj->color.b = atof(value);
 
-            // Set boolean value
-            b_found = TRUE;
+               // Set boolean value
+               b_found = TRUE;
+            }
          }
 
          // Make sure if ',' is next character, it moves past it

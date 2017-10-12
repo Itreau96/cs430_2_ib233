@@ -33,12 +33,12 @@ static inline void ib_v3_sub(ib_v3 *out, ib_v3 *a, ib_v3 *b)
 }
 
 // Function used to scale input vector by scale value
-static inline void ib_v3_scale(ib_v3 *out, float *scale)
+static inline void ib_v3_scale(ib_v3 *out, float scale)
 {
    // Scale x, y, and z of output vector by scale value
-   out->x = out->x * (*scale);
-   out->y = out->y * (*scale);
-   out->z = out->z * (*scale);
+   out->x = out->x * scale;
+   out->y = out->y * scale;
+   out->z = out->z * scale;
 }
 
 // Function used to calculate dot product of two vectors
