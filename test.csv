@@ -1,4 +1,4 @@
 camera, width: 5, height: 5
-sphere, color: [0, 1, 0], position: [0, 0, -4], radius: 3.0
+sphere, color: [0.4, 0.2, 0.6], position: [0, 0, -4], radius: 3.0
 sphere, color: [1, 0, 0], position: [0, 5, -8], radius: 3.0
 plane, color: [0, 0, 1], position: [0, 0, -3], normal: [3, 3, 1]

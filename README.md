@@ -22,7 +22,7 @@ Steps to use:
 1. Extract the source folder provided.
 2. Using a command line interface, navigate to the source folder directory.
 3. Type "Make" in the command line to create the executable.
-4. Type "./raycast <width> <height> <input.csv> <output.ppm>". 
+4. Type "./raycast width height input.csv output.ppm". 
 
 ## Known Issues ##
 
